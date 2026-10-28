@@ -1,5 +1,28 @@
 **English** · [Français](README.fr.md)
 
+## О форке
+
+Это форк проекта [mochiiwuff/capri-desktop](https://github.com/mochiiwuff/capri-desktop). Все заслуги за Capri
+принадлежат её создателю, mochiiwuff.
+
+Я немного улучшил Capri: теперь она может вас слышать. Нажмите клавишу голоса, скажите, что хотите, и она выполнит
+просьбу так, будто вы её напечатали. Клавишу можно поменять: правый клик по Capri → «Клавиша голоса», либо задать свою
+комбинацию из Ctrl и Alt плюс любая буква, цифра или клавиша F. Подробнее — в разделе
+[Talk to her by voice](#talk-to-her-by-voice) ниже (на английском).
+
+---
+
+## About this fork
+
+This is a fork of [mochiiwuff/capri-desktop](https://github.com/mochiiwuff/capri-desktop). All the credit for Capri
+goes to its creator, mochiiwuff.
+
+I've improved Capri a little: she can hear you now. Press the voice key, say what you want, and she acts on it as if
+you had typed it. You can change the key: right-click Capri and pick *Voice key*, or set your own combination of Ctrl
+and Alt plus a letter, a digit or an F key. For details, see [Talk to her by voice](#talk-to-her-by-voice) below.
+
+---
+
 # Capri
 
 Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, lives on your desktop
