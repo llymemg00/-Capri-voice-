@@ -289,7 +289,9 @@ export class Chat {
     }
     if (asked.kind === 'media') {
       this.capri.pulse();
-      return (await this.host.media(asked.action)) ? { line: t.media[asked.action], face: 'smug' } : null;
+      return (await this.host.media(asked.action))
+        ? { line: t.media[asked.action], face: 'smug' }
+        : { line: t.media.none, face: 'smug' };
     }
     if (asked.kind === 'music') {
       this.zap();
@@ -365,7 +367,7 @@ export class Chat {
   async media(action, answer) {
     this.capri.pulse();
     const ok = await this.host.media(action);
-    if (ok) this.addLine(answer, this.t.media[action], 'smug');
+    this.addLine(answer, ok ? this.t.media[action] : this.t.media.none, 'smug');
   }
 
   // A Spotify search, in the app if it's there.
@@ -454,6 +456,7 @@ export class Chat {
     const lines = [
       'Only when the user asks you to open an app or a game installed on their PC, play something on Spotify, control the music playing, or open a website: say in a few words that you will, and end your answer with one tag: [[open: NAME]], [[music: WHAT TO PLAY]], [[media: ACTION]] (ACTION: pause, play, next, previous, volup, voldown or mute), or [[site: ADDRESS]]. Some of these get a button to confirm, so never say it is already done. Any other time, write no tag at all: there are no other tags.',
     ];
+    lines.push('To download or install a program the user names, open its official download page with [[site: ADDRESS]]. You never run an installer: they download it and start it themselves. Official pages: Discord discord.com/download, Steam store.steampowered.com/about, Telegram desktop.telegram.org, Spotify spotify.com/download, Google Chrome google.com/chrome, Visual Studio Code code.visualstudio.com, VLC videolan.org/vlc, Firefox mozilla.org/firefox, OBS obsproject.com.');
     if (this.apps.length) {
       const open = this.apps.map(({ name, label }) => (label && label !== name ? `${name} (${label})` : name)).join(', ');
       lines.push(`You can also close an app that's open, only when they ask you to: end your answer with [[close: NAME]], NAME being the exact name from this list (the part before the parentheses). They get a button to confirm it. Apps open right now: ${open}.`);

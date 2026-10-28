@@ -10,14 +10,6 @@ glitche, commente chaque action, vient te chercher quand elle attend ta permissi
 
 ![Téléportation, image par image](docs/teleport.png)
 
-## À propos de ce fork
-
-Ceci est un fork de [mochiiwuff/capri-desktop](https://github.com/mochiiwuff/capri-desktop). Tout le mérite de Capri
-revient à son créateur, mochiiwuff. Cette version ajoute une chose : **elle peut t'entendre maintenant.** Appuie sur la
-touche vocale, dis ce que tu veux, et elle agit comme si tu l'avais tapé. La touche se choisit toi-même : clic droit sur
-elle, *Touche de la voix*, ou ta propre combinaison (Ctrl et Alt, plus une touche). Voir
-[Parler avec elle à la voix](#parler-avec-elle-à-la-voix) plus bas.
-
 ## Ce qu'elle fait
 
 - **Quand elle démarre** : elle attrape ton écran. Ses bords grésillent en rouge, sa main gauche s'abat sur le bord,
@@ -209,20 +201,6 @@ Elle n'attrape la souris que sur son corps (au pixel près) : tout le reste de l
 Elle parle **français, anglais, espagnol, portugais du Brésil et russe**, et choisit toute seule la langue de ton
 système. Tu peux en choisir une autre dans son menu.
 
-## Parler avec elle à la voix
-
-Appuie sur la touche vocale (Ctrl+Alt+V par défaut), dis ce que tu veux, puis fais une pause ou appuie à nouveau. Ce que tu
-as dit va dans son chat exactement comme si tu l'avais tapé : « ouvre YouTube », « plus fort », « mets pause », ou une
-question à Claude Code, tout marche.
-
-- **Changer la touche :** clic droit sur elle › *Touche de la voix*. Choisis une des propositions, ou *Autre
-  combinaison…* et appuie sur les touches que tu veux. Il faut Ctrl et Alt ensemble, plus une lettre, un chiffre ou une
-  touche F. Ctrl+Alt+C reste pour la ranger.
-- **Reconnaissance vocale :** il faut une clé Groq ou OpenAI, dans son menu › *Modèle IA* › *Clé API*. Groq est le choix
-  par défaut. Son fichier de réglages contient `sttProvider` (`groq` ou `openai`) et `voiceConfirm` : si c'est vrai, ce
-  que tu as dit s'affiche dans sa boîte et tu l'envoies avec Entrée.
-- **Noms russes :** les sites dits à voix haute marchent aussi en russe (« ютуб », « гугл », « инстаграм »).
-
 ## Installation
 
 ### Démarrage rapide (Windows, sans coder)
@@ -331,9 +309,7 @@ avec ces noms (`.mp3`, `.wav`, `.ogg` ou `.m4a`) :
 ## C'est sûr ?
 
 - Tout le code est ici. L'installeur est fabriqué à partir de lui avec `npm run dist` ; tu peux fabriquer le tien.
-- Rien ne quitte ton PC (voir plus bas), sauf ce que tu lui dis à la voix, si tu t'en sers : cela part vers le service
-  de reconnaissance vocale que tu as choisi (Groq ou OpenAI, avec ta propre clé). Elle ne parle à Claude Code que par un
-  hook sur `127.0.0.1`.
+- Rien ne quitte ton PC (voir plus bas) : elle ne parle à Claude Code que par un hook sur `127.0.0.1`.
 - Ce qu'elle change sur ton système : le hook dans `~/.claude/settings.json` (une sauvegarde est faite avant, et tu peux
   le retirer depuis son menu), et une entrée au démarrage seulement si tu coches « Lancer au démarrage ». Elle se
   désinstalle comme n'importe quelle app, depuis Paramètres Windows › Applications.
@@ -367,10 +343,6 @@ Rien. Le hook ne garde que ce qui sert à l'affichage (nom de l'outil, chemin du
 début de ton prompt, dernier message de Claude jusqu'à 6 000 caractères pour pouvoir te l'afficher, le tout tronqué)
 et l'envoie à `127.0.0.1` uniquement.
 Le contenu de tes fichiers n'est jamais transmis : pour une écriture, seule sa taille passe.
-
-La seule exception, c'est ta voix. Quand tu lui parles avec la touche vocale, l'enregistrement part vers le service de
-reconnaissance que tu as choisi, Groq ou OpenAI, avec ta propre clé, et revient en texte. Elle ne le garde pas. N'appuie pas sur la
-touche vocale si tu ne le veux pas : elle fonctionne pareil en tapant.
 
 Son chat va à Ollama sur ton PC (`127.0.0.1:11434`, ou `OLLAMA_HOST`) avec ce qu'elle sait du moment (le nom du
 projet, la dernière action de Claude, les compteurs du jour). Son journal de mission reste dans son propre stockage,

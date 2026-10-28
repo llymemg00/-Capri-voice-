@@ -141,15 +141,50 @@ async function launch({ kind, id } = {}) {
   return undefined;
 }
 
-// The media keys, as if pressed on the keyboard: whatever plays music (Spotify, a browser…) reacts.
-// Play and pause are the same key; the volume moves a few steps at a time. Sent as keys (their virtual
-// key codes), not typed: typed, they come out as "³" or "°" on a German keyboard.
-const MEDIA = { pause: [0xb3, 1], play: [0xb3, 1], next: [0xb0, 1], previous: [0xb1, 1], volup: [0xaf, 5], voldown: [0xae, 5], mute: [0xad, 1] };
+// Play, pause, next and previous are sent to the session that is playing (a browser tab, Spotify…) through
+// Windows' own media control: it says whether the session took the command. The volume and mute keys are
+// pressed as keys, as if on the keyboard. Typed, they would come out as "³" or "°" on a German keyboard.
+// Each command, the method that does it, and the state the player must be in for it: play takes a paused
+// player (or the current one), pause and the rest take a playing one.
+const SESSION = {
+  play: ['TryPlayAsync', 'Paused', true],
+  pause: ['TryPauseAsync', 'Playing', false],
+  next: ['TrySkipNextAsync', 'Playing', false],
+  previous: ['TrySkipPreviousAsync', 'Playing', false],
+};
+const MEDIA = { volup: [0xaf, 5], voldown: [0xae, 5], mute: [0xad, 1] };
 const KEY_DOWN = 1; // KEYEVENTF_EXTENDEDKEY
 const KEY_UP = 3;   // ...and KEYEVENTF_KEYUP
 
+// The script asks Windows for every media session it knows (browser tabs, Spotify…), the current one first,
+// and calls the command on the first one in the state wanted. It prints ok, refused (the player said no),
+// or none (no player is in that state).
+function sessionScript(method, wanted, fallbackToAny) {
+  return [
+    'Add-Type -AssemblyName System.Runtime.WindowsRuntime',
+    '[void][Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime]',
+    "$asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]",
+    'function Await($op, $type) { $t = $asTask.MakeGenericMethod($type).Invoke($null, @($op)); $t.Wait(-1) | Out-Null; $t.Result }',
+    '$mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])',
+    '$list = @($mgr.GetSessions()); $cur = $mgr.GetCurrentSession(); if ($cur) { $list = @($cur) + $list }',
+    `$pick = @($list | Where-Object { $_.GetPlaybackInfo().PlaybackStatus -eq '${wanted}' })`,
+    fallbackToAny ? 'if (-not $pick) { $pick = @($list) }' : '',
+    `if (-not $pick) { 'none' } elseif (Await ($pick[0].${method}()) ([bool])) { 'ok' } else { 'refused' }`,
+  ].filter(Boolean).join('; ');
+}
+
 async function media(action) {
-  if (!WIN || !MEDIA[action]) return false;
+  if (!WIN) return false;
+  if (SESSION[action]) {
+    const [method, wanted, any] = SESSION[action];
+    const out = await powershell(sessionScript(method, wanted, any), 20000).catch((err) => {
+      console.error(`[capri] media ${action} failed:`, err.message);
+      return '';
+    });
+    console.log(`[capri] media ${action}: ${out || 'no answer'}`);
+    return out === 'ok';
+  }
+  if (!MEDIA[action]) return false;
   const [key, times] = MEDIA[action];
   return powershell(
     'Add-Type -Namespace Capri -Name Keys -MemberDefinition \'[DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, System.UIntPtr extra);\'; '
