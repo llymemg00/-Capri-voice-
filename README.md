@@ -10,6 +10,9 @@
 комбинацию из Ctrl и Alt плюс любая буква, цифра или клавиша F. Подробнее — в разделе
 [Talk to her by voice](#talk-to-her-by-voice) ниже (на английском).
 
+Версия 0.4.7 добавляет режим osu! (см. [osu! mode](#osu-mode)) и улучшает понимание русского: язык распознавания теперь
+выбирается в настройках, буфер обмена читается и не зависает.
+
 ---
 
 ## About this fork
@@ -187,6 +190,12 @@ panel says so every time.
   until you click it. She closes it the way its own close button does, so it can still ask you to save. If it only
   hid in the tray, she offers **Force quit**, again only on your click (unsaved work is lost then). She never closes
   Windows' own pieces, Claude, Ollama or herself.
+- **Your clipboard**: "what's in my clipboard?" or "translate what I copied", and she reads the text you copied and
+  answers. That text goes to her model with that one request only. It isn't kept in her chat history or her memory
+  file, and only the first 2,500 characters are read. Pictures aren't read, only text.
+- **osu!lazer**: "osu mode" (or "режим осу") starts osu!lazer from the path you set and watches your session. Say
+  "osu mode off" to stop. When you close the game, she reports how long you played and the pp you gained; see
+  [osu! mode](#osu-mode).
 
 Nothing else: she can't see your screen or your files.
 
@@ -229,6 +238,39 @@ chat exactly as if you had typed it, so "open YouTube", "louder", "pause the mus
   Her settings file holds `sttProvider` (`groq` or `openai`) and `voiceConfirm`: when true, what you said appears in her
   box and you send it with Enter.
 - **Russian names:** spoken sites work in Russian too ("ютуб", "гугл", "инстаграм").
+- **Language:** she listens in the language of her interface, so with Russian set she expects Russian. If she mishears,
+  set `sttLanguage` in her settings file to `ru`, `fr`, `en`, `es`, `pt`, or `auto` to let the service guess.
+
+## osu! mode
+
+Capri can start osu!lazer and count your sessions. She doesn't play for you and doesn't send any input to the game:
+she starts the game and checks whether it's running.
+
+**Set it up once**, in her settings file (`config.json`):
+
+```json
+{
+  "osuPath": "C:\\Users\\YOU\\AppData\\Local\\osulazer\\osu!.exe",
+  "osuUserId": "your numeric user id",
+  "osuClientId": "the Client ID of your OAuth application",
+  "osuClientSecret": "its secret"
+}
+```
+
+- `osuPath` must point to `osu!.exe`. She refuses any other file name.
+- Your user ID is the number in your profile link: `osu.ppy.sh/users/12345678`.
+- Create the OAuth application at osu! › Settings › OAuth, with `http://localhost` as the callback URL. It's only used to
+  read your public stats.
+- The client secret is stored as plain text in `config.json`, so keep that file private.
+
+Without the last three fields she still starts the game and counts the time. The rating needs them.
+
+**Use it:** say or type "osu mode" (or "режим осу"). When you close osu!, she reports the session length, the pp you
+gained, and your global rank if the API gives it. osu! updates the stats a little after a play is submitted, so the pp
+can show up 1 to 5 minutes later. If the game was already open when you said "osu mode", the session counts from that
+moment. Each session is saved to `osu-log.json` in her data folder. "osu mode off" stops watching.
+
+Animations for this mode aren't done yet: for now, the reports are text in her panel.
 
 ## Install
 
@@ -362,6 +404,9 @@ named like this (`.mp3`, `.wav`, `.ogg` or `.m4a`):
 - **She only floats around and says idle things.** That's normal until Claude Code does something. If it never reacts,
   check her menu says "Claude Code hooks: installed", then close Claude Code completely and open it again.
 
+- **osu! mode doesn't start the game.** Check that `osuPath` points to an existing `osu!.exe`, then restart her after
+  editing `config.json`. Her reply says what's missing.
+
 ## What leaves your machine
 
 Nothing. The hook only keeps what the display needs (tool name, file path, command, the start of your prompt,
@@ -374,6 +419,10 @@ if you don't want that: she works the same by typing.
 
 Her chat goes to Ollama on your PC (`127.0.0.1:11434`, or `OLLAMA_HOST`) with what she knows of the moment (the
 project's name, Claude's last action, today's counts). Her mission log stays in her own storage on your PC.
+
+Two more things leave your PC, and only when you ask for them. Clipboard text goes to the chat model you picked, with
+your question, so check that provider's data policy before you copy anything private. osu! mode sends requests to
+`osu.ppy.sh` with your client credentials, to read your public stats; nothing else is sent there.
 
 ## Art direction
 
