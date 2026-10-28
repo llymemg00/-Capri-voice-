@@ -1,5 +1,28 @@
 **English** · [Français](README.fr.md)
 
+## О форке
+
+Это форк проекта [mochiiwuff/capri-desktop](https://github.com/mochiiwuff/capri-desktop). Все заслуги за Capri
+принадлежат её создателю, mochiiwuff.
+
+Я немного улучшил Capri: теперь она может вас слышать. Нажмите клавишу голоса, скажите, что хотите, и она выполнит
+просьбу так, будто вы её напечатали. Клавишу можно поменять: правый клик по Capri → «Клавиша голоса», либо задать свою
+комбинацию из Ctrl и Alt плюс любая буква, цифра или клавиша F. Подробнее — в разделе
+[Talk to her by voice](#talk-to-her-by-voice) ниже (на английском).
+
+---
+
+## About this fork
+
+This is a fork of [mochiiwuff/capri-desktop](https://github.com/mochiiwuff/capri-desktop). All the credit for Capri
+goes to its creator, mochiiwuff.
+
+I've improved Capri a little: she can hear you now. Press the voice key, say what you want, and she acts on it as if
+you had typed it. You can change the key: right-click Capri and pick *Voice key*, or set your own combination of Ctrl
+and Alt plus a letter, a digit or an F key. For details, see [Talk to her by voice](#talk-to-her-by-voice) below.
+
+---
+
 # Capri
 
 Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, lives on your desktop
@@ -9,6 +32,13 @@ glitches, comments on every action, comes to find you when it needs your permiss
 ![Capri telling you Claude is done](docs/done.png)
 
 ![Teleport, frame by frame](docs/teleport.png)
+
+## About this fork
+
+This is a fork of [mochiiwuff/capri-desktop](https://github.com/mochiiwuff/capri-desktop). All the credit for Capri
+goes to its creator, mochiiwuff. This version adds one thing: **she can hear you now.** Press the voice key, say what you
+want, and she acts on it as if you had typed it. The key is yours to choose: right-click her and pick *Voice key*, or
+press your own combination (Ctrl and Alt, plus a key). See [Talk to her by voice](#talk-to-her-by-voice) below.
 
 ## What she does
 
@@ -188,6 +218,18 @@ She only catches the mouse on her actual body (pixel-precise): the rest of the s
 She speaks **French, English, Spanish, Brazilian Portuguese and Russian**, and picks the language of your system on her
 own. You can choose another one in her menu.
 
+## Talk to her by voice
+
+Press the voice key (Ctrl+Alt+V by default), say what you want, then pause or press it again. What you said goes to her
+chat exactly as if you had typed it, so "open YouTube", "louder", "pause the music" or a question to Claude Code all work.
+
+- **Change the key:** right-click her › *Voice key*. Pick a preset, or *Other combination…* and press the keys you like.
+  It needs Ctrl and Alt together, plus a letter, a digit or an F key. Ctrl+Alt+C stays for putting her away.
+- **Speech recognition:** it needs a Groq or OpenAI key, through her menu › *AI model* › *API key*. Groq is the default.
+  Her settings file holds `sttProvider` (`groq` or `openai`) and `voiceConfirm`: when true, what you said appears in her
+  box and you send it with Enter.
+- **Russian names:** spoken sites work in Russian too ("ютуб", "гугл", "инстаграм").
+
 ## Install
 
 ### Quick start (Windows, no coding)
@@ -293,7 +335,8 @@ named like this (`.mp3`, `.wav`, `.ogg` or `.m4a`):
 ## Is it safe?
 
 - All of the code is right here. The installer is built from it with `npm run dist`; you can build your own.
-- Nothing leaves your PC (see below): she only talks to Claude Code through a hook on `127.0.0.1`.
+- Nothing leaves your PC (see below), except what you say to her by voice, if you use it: that goes to the speech
+  service you picked (Groq or OpenAI, with your own key). She only talks to Claude Code through a hook on `127.0.0.1`.
 - What she changes on your system: the hook in `~/.claude/settings.json` (a backup is written first, and you can remove
   it from her menu), and a startup entry only if you tick "Start with Windows". She uninstalls like any app, from
   Windows Settings › Apps.
@@ -324,6 +367,10 @@ named like this (`.mp3`, `.wav`, `.ogg` or `.m4a`):
 Nothing. The hook only keeps what the display needs (tool name, file path, command, the start of your prompt,
 Claude's last message up to 6,000 characters so she can show it to you, all truncated) and sends it to `127.0.0.1` only.
 Your file contents are never sent: for a write, only its size goes through.
+
+The one exception is your voice. When you talk to her with the voice key, the recording goes to the speech service you
+picked, Groq or OpenAI, with your own key, and comes back as text. It is not kept on her side. Don't press the voice key
+if you don't want that: she works the same by typing.
 
 Her chat goes to Ollama on your PC (`127.0.0.1:11434`, or `OLLAMA_HOST`) with what she knows of the moment (the
 project's name, Claude's last action, today's counts). Her mission log stays in her own storage on your PC.
