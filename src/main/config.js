@@ -31,7 +31,12 @@ const DEFAULTS = {
   motion: 'auto',    // her animations: 'auto' (like Windows' animation effects), 'full' or 'reduced'
   motionAsked: false, // she asked once, Windows' animations being off, whether to move anyway
   voiceKey: 'Control+Alt+V', // the key that starts talking to her: Ctrl or Alt with a key (her menu › Voice key)
+  sttLanguage: null,   // the language you speak to her: 'ru', 'fr', 'en', 'es', 'pt', or 'auto' to let the service guess (null: Russian when her interface is in Russian)
   sttProvider: 'groq', // the speech-to-text service for what you say to her (stt.js): 'groq' or 'openai'
+  osuPath: '',         // osu!.exe (osu!lazer), for osu! mode
+  osuUserId: '',       // your osu! user id (the number in your profile link)
+  osuClientId: '',     // an OAuth client of yours (osu! › Settings › OAuth), for the rating
+  osuClientSecret: '', // its secret: kept out of the overlay (main.js)
   render: 'auto',   // how her window is drawn: 'auto', 'gl' (OpenGL) or 'software' (no graphics card), for PCs that show it black
 };
 

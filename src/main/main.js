@@ -18,6 +18,7 @@ const setup = require('./setup');
 const apps = require('./apps');
 const launch = require('./launch');
 const stt = require('./stt');
+const osu = require('./osu');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -29,6 +30,7 @@ const PORT = Number(process.env.CAPRI_PORT) || 47823;
 const SOUND_EXT = /\.(mp3|wav|ogg|m4a)$/i;
 
 const OLLAMA_SITE = 'https://ollama.com';
+const CHAT_LIMIT_MS = 120 * 1000; // an answer that takes longer than this is stopped, not waited for forever
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'capri', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
@@ -231,6 +233,14 @@ function demoWindow(open) {
 }
 
 // 'auto' -> the first system language Capri speaks, English otherwise.
+// the language she hears: sttLanguage in the config ('ru', 'fr', ... or 'auto' to let the service guess).
+// Unset: Russian when her interface is in Russian, else the service guesses.
+function heardLanguage(cfg) {
+  if (cfg.sttLanguage === 'auto') return null;
+  if (LANGS.includes(cfg.sttLanguage)) return cfg.sttLanguage;
+  return resolveLang(cfg.lang) === 'ru' ? 'ru' : null;
+}
+
 function resolveLang(setting) {
   if (LANGS.includes(setting)) return setting;
   const preferred = [...app.getPreferredSystemLanguages(), app.getSystemLocale(), app.getLocale()];
@@ -243,7 +253,7 @@ function resolveLang(setting) {
 
 // What the overlay gets: `lang` is the resolved one, `langSetting` what the user picked.
 function rendererConfig() {
-  const { apiKeys, ...cfg } = config.load(); // the keys stay here: the overlay only learns which ones are set
+  const { apiKeys, osuClientSecret, ...cfg } = config.load(); // the keys stay here: the overlay only learns which ones are set
   return { ...cfg, keys: Object.keys(apiKeys || {}), assistant: activeAssistant().id, lang: resolveLang(cfg.lang), langSetting: cfg.lang, floorGap: overlayArea().gap };
 }
 
@@ -591,6 +601,8 @@ function registerIpc() {
   ipcMain.handle('chat:send', async (_e, { id, messages }) => {
     const abort = new AbortController();
     chats.set(id, abort);
+    let timedOut = false;
+    const limit = setTimeout(() => { timedOut = true; abort.abort(); }, CHAT_LIMIT_MS);
     try {
       let streamed = false;
       const send = (text) => {
@@ -602,8 +614,10 @@ function registerIpc() {
       if (cfg.provider === 'claude') saveMemory({ claude: llm.claudeMemory() });
       return { ok: true, text };
     } catch (err) {
+      if (timedOut) return { ok: false, error: 'timeout', code: 'timeout' };
       return { ok: false, error: abort.signal.aborted ? 'stopped' : err.message, code: err.code || null };
     } finally {
+      clearTimeout(limit);
       chats.delete(id);
     }
   });
@@ -619,7 +633,7 @@ function registerIpc() {
     const provider = stt.PROVIDERS[cfg.sttProvider] ? cfg.sttProvider : 'groq';
     const key = setup.openKeys(cfg.apiKeys)[provider] || process.env[stt.PROVIDERS[provider].env] || '';
     try {
-      return { ok: true, text: await stt.transcribe(wav, { provider, key }) };
+      return { ok: true, text: await stt.transcribe(wav, { provider, key, language: heardLanguage(cfg) }) };
     } catch (err) {
       return { ok: false, error: err.message, code: err.code || null };
     }
@@ -673,6 +687,10 @@ function registerIpc() {
   ipcMain.handle('setup:launch', (_e, integration) => setup.launchThroughOllama(integration));
   // closing an app you asked her to close, once you've clicked to confirm (apps.js)
   const appInfo = (app) => app && { name: app.process, label: app.label };
+  // osu! mode (osu.js): start the game and watch it, or stop watching
+  osu.init({ emitEvent: (payload) => sendCommand('osu', payload), config: config.load });
+  ipcMain.handle('osu:start', () => osu.start().catch((err) => ({ ok: false, code: 'error', error: err.message })));
+  ipcMain.handle('osu:stop', () => osu.stop());
   ipcMain.handle('apps:list', async () => (await apps.list().catch(() => [])).map(appInfo));
   ipcMain.handle('apps:find', async (_e, wanted) => appInfo(await apps.find(wanted).catch(() => null)));
   ipcMain.handle('apps:close', (_e, { name, force }) => apps.close(name, { force }).catch((err) => ({ error: err.message })));
@@ -680,6 +698,8 @@ function registerIpc() {
   ipcMain.handle('apps:findLaunch', (_e, text) => launch.find(String(text || '')).catch(() => null));
   ipcMain.handle('apps:launch', (_e, item) => launch.launch(item).then(() => ({ ok: true }), (err) => ({ ok: false, error: err.message })));
   ipcMain.handle('apps:media', (_e, action) => launch.media(action));
+  // what is copied now, as text (capped): she reads it when you ask about the clipboard
+  ipcMain.handle('clipboard:text', () => clipboard.readText().slice(0, 4000));
   ipcMain.handle('apps:music', (_e, query) => launch.music(query).catch(() => false));
   ipcMain.handle('apps:site', (_e, address) => launch.site(address).catch(() => false));
   // typing to her: the overlay takes the keyboard while the chat is open, and gives it back after

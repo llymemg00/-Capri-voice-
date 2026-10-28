@@ -8,12 +8,18 @@ const PROVIDERS = {
   groq: { label: 'Groq', url: 'https://api.groq.com/openai/v1', model: 'whisper-large-v3-turbo', env: 'GROQ_API_KEY' },
   openai: { label: 'OpenAI', url: 'https://api.openai.com/v1', model: 'whisper-1', env: 'OPENAI_API_KEY' },
 };
+// what the service is told to expect, per language: a sentence in it steers the words it writes
+const PROMPTS = {
+  ru: 'Капри, открой Spotify, сделай громче. Что в буфере обмена? Переведи текст на английский.',
+};
 const MAX_BYTES = 25 * 1024 * 1024; // the service's own limit
 const TIMEOUT_MS = 30000;
 
 // wav: an ArrayBuffer of 16 kHz mono 16-bit WAV (built in the overlay, ear.js). The language is
 // detected by the service, so French, Russian, Spanish or Portuguese work as they are.
-async function transcribe(wav, { provider = 'groq', key } = {}) {
+// language: an ISO code ('ru', 'fr', ...) when you speak one language to her, or null to let the service guess.
+// Left to guess, Whisper often takes short Russian phrases for another Slavic language.
+async function transcribe(wav, { provider = 'groq', key, language = null } = {}) {
   const service = PROVIDERS[provider];
   if (!service) throw Object.assign(new Error('unknown speech service'), { code: 'unknown' });
   if (!key) throw Object.assign(new Error(`no API key for ${service.label}`), { code: 'nokey' });
@@ -24,6 +30,8 @@ async function transcribe(wav, { provider = 'groq', key } = {}) {
   form.append('file', new Blob([wav], { type: 'audio/wav' }), 'voice.wav');
   form.append('model', service.model);
   form.append('response_format', 'json');
+  if (language) form.append('language', language);
+  if (language && PROMPTS[language]) form.append('prompt', PROMPTS[language]);
   const res = await fetch(`${service.url}/audio/transcriptions`, {
     method: 'POST',
     headers: { authorization: `Bearer ${key}` },

@@ -369,6 +369,9 @@ async function boot() {
       case 'teleport':
         capri.teleport(capri.spot('random'));
         break;
+      case 'osu': // osu! mode: a session started or ended (osu.js)
+        chat.osuEvent(cmd);
+        break;
       case 'status':
         brain.status();
         break;

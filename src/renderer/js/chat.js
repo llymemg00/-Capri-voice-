@@ -9,6 +9,87 @@ import { pick, fmt } from './util.js';
 import { ASSISTANT_NAMES } from './lines.js';
 
 const REMEMBER = 20; // messages she has in mind when answering
+// what she says about osu! mode, by language (English when there is no line for the language)
+const OSU_TEXT = {
+  en: {
+    started: 'osu!lazer is up. I\'m keeping track of your session.',
+    startedNoStats: 'osu!lazer is up. I\'ll count the time; add your osu! API details to the config to see the rating.',
+    stopped: 'osu! mode off.',
+    nopath: 'Set the path to osu!.exe in the config first (osuPath).',
+    error: 'osu! wouldn\'t start.',
+    session: 'Session on. Good luck.',
+    end: 'Session over: {minutes} min, {pp} pp{rank}.',
+    endNoStats: 'Session over: {minutes} min.',
+    endFailed: 'Session over: {minutes} min, but osu! didn\'t answer ({error}).',
+    rank: ' (rank #{rank})',
+  },
+  fr: {
+    started: 'osu!lazer est lancé. Je garde la trace de ta session.',
+    startedNoStats: 'osu!lazer est lancé. Je compte le temps ; mets tes identifiants API osu! dans la config pour voir le rating.',
+    stopped: 'Mode osu éteint.',
+    nopath: 'Mets d\'abord le chemin de osu!.exe dans la config (osuPath).',
+    error: 'osu! n\'a pas démarré.',
+    session: 'Session lancée. Bonne chance.',
+    end: 'Session finie : {minutes} min, {pp} pp{rank}.',
+    endNoStats: 'Session finie : {minutes} min.',
+    endFailed: 'Session finie : {minutes} min, mais osu! n\'a pas répondu ({error}).',
+    rank: ' (rang #{rank})',
+  },
+  es: {
+    started: 'osu!lazer está en marcha. Llevo la cuenta de tu sesión.',
+    startedNoStats: 'osu!lazer está en marcha. Cuento el tiempo; pon tus datos de la API de osu! en la configuración para ver el rating.',
+    stopped: 'Modo osu desactivado.',
+    nopath: 'Primero pon la ruta de osu!.exe en la configuración (osuPath).',
+    error: 'osu! no arrancó.',
+    session: 'Sesión iniciada. Suerte.',
+    end: 'Sesión terminada: {minutes} min, {pp} pp{rank}.',
+    endNoStats: 'Sesión terminada: {minutes} min.',
+    endFailed: 'Sesión terminada: {minutes} min, pero osu! no respondió ({error}).',
+    rank: ' (puesto #{rank})',
+  },
+  pt: {
+    started: 'osu!lazer está aberto. Estou acompanhando sua sessão.',
+    startedNoStats: 'osu!lazer está aberto. Conto o tempo; coloque seus dados da API do osu! na configuração para ver o rating.',
+    stopped: 'Modo osu desligado.',
+    nopath: 'Primeiro coloque o caminho do osu!.exe na configuração (osuPath).',
+    error: 'O osu! não abriu.',
+    session: 'Sessão iniciada. Boa sorte.',
+    end: 'Sessão encerrada: {minutes} min, {pp} pp{rank}.',
+    endNoStats: 'Sessão encerrada: {minutes} min.',
+    endFailed: 'Sessão encerrada: {minutes} min, mas o osu! não respondeu ({error}).',
+    rank: ' (posição #{rank})',
+  },
+  ru: {
+    started: 'osu!lazer запущен. Я слежу за сессией.',
+    startedNoStats: 'osu!lazer запущен. Я считаю время; добавьте данные osu! API в конфиг, чтобы видеть рейтинг.',
+    stopped: 'Режим осу выключен.',
+    nopath: 'Сначала укажите путь к osu!.exe в конфиге (osuPath).',
+    error: 'osu! не запустился.',
+    session: 'Сессия пошла. Удачи.',
+    end: 'Сессия окончена: {minutes} мин, {pp} pp{rank}.',
+    endNoStats: 'Сессия окончена: {minutes} мин.',
+    endFailed: 'Сессия окончена: {minutes} мин, но osu! не ответил ({error}).',
+    rank: ' (место #{rank})',
+  },
+};
+
+function osuText(lang, key, data = {}) {
+  const t = OSU_TEXT[lang] || OSU_TEXT.en;
+  let line = t[key] || OSU_TEXT.en[key] || key;
+  if (key === 'end' && data.rank == null) line = line.replace('{rank}', '');
+  const values = {
+    ...data,
+    minutes: Math.max(0, Math.round((data.seconds || 0) / 60)),
+    pp: data.pp == null ? '' : `${data.pp >= 0 ? '+' : ''}${Number(data.pp).toFixed(2)}`,
+    rank: data.rank == null ? '' : fill(t.rank || OSU_TEXT.en.rank, { rank: data.rank }),
+  };
+  return line.replace(/\{(\w+)\}/g, (_, k) => (values[k] ?? ''));
+}
+
+function fill(template, values) {
+  return template.replace(/\{(\w+)\}/g, (_, k) => (values[k] ?? ''));
+}
+
 const KEEP = 60;     // messages she remembers across restarts (memory.json)
 // her language, where small models need it: how she says "we" (else it's in English), and the last line
 // of her prompt, in that language (they drift into the English of everything above it)
@@ -21,12 +102,18 @@ const IN_LANGUAGE = {
 };
 const STAY_MS = 10 * 60 * 1000; // no wandering off mid-conversation
 const LOADING_AFTER_MS = 5000;
+const CLIPBOARD_MAX = 2500; // characters of the clipboard she reads: more slows a small local model down
 const CLOSE_TAG = /\[\[\s*close\s*:?\s*([^\]]*)\]\]/i; // [[close: AM Music]] at the end of her answer
 // "close", "shut down", "ferme", "quitte", "cierra", "fecha", "закрой"... in any of her languages
 const CLOSE_ASK = /\b(close|shut|quit|kill|exit)|ferm|quitt|coupe|arr[êe]t|cierr|cerra|fech|закр|выключ/i;
+// asks about what is copied: "what's in the clipboard", "translate what I copied" (any language)
+const CLIPBOARD_ASK = /clipboard|буфер|presse-papier|portapapel|área de transfer|copié|copiado|copiei|скопир|what i copied/i;
 // her other tags: [[open: Spotify]], [[music: Bad Bunny]], [[media: next]], [[site: youtube.com]]
 const TAG = /\[\[\s*(open|music|media|site)\s*:\s*([^\]]*)\]\]/i;
 // "open", "launch", "ouvre", "lance", "abre", "открой"... in any of her languages
+// osu! mode: "режим осу", "osu mode", "modo osu"; off: "выключи осу", "stop osu"
+const OSU_OFF = /(выключи|выключить|отключи|stop|arr[eê]te|apaga|desliga)[^\n]*(осу|osu)/i;
+const OSU_ASK = /режим\s*осу|осу\s*режим|osu\s*mode|mode\s*osu|modo\s*osu|mode\s*osu!/i;
 const OPEN_ASK = /\b(open|launch|start|run)\b|ouvr|lance|démarre|abre|abrir|inicia|ejecuta|executa|открой|запусти/i;
 // what to do with the music playing, said plainly (only when it's about music, or said in a few words)
 const MEDIA_ASK = [
@@ -179,11 +266,30 @@ export class Chat {
     this.capri.nextGaze = performance.now() + 60000;
   }
 
+  // a failed turn never leaves the chat stuck: the next message is answered
   async send(text) {
+    try {
+      await this.sendTurn(text);
+    } catch (err) {
+      console.error('[capri] chat turn:', err);
+      this.turn = 0;
+      this.panel.setChatBusy(false);
+      this.panel.stream(`${this.t.failed} ${err.message}`, { done: true });
+    }
+  }
+
+  async sendTurn(text) {
     if (this.turn || !this.open) return;
     const id = Date.now();
     this.turn = id;
     this.answer = '';
+    // "what's in my clipboard", "translate what I copied": the copied text goes to her with your words;
+    // the chat shows only your words
+    const clip = CLIPBOARD_ASK.test(text) && !this.agent ? await this.host.clipboard() : null;
+    const modelText = clip === null
+      ? text
+      : `${text}\n\n[Clipboard contents, use them for the request above]\n${clip ? clip.slice(0, CLIPBOARD_MAX) : '(the clipboard is empty)'}`;
+    // the history keeps your words only: the copied text goes with this one request, not every later one
     this.history.push({ role: 'user', content: text });
     this.panel.setChatBusy(true);
     this.panel.setActions([]); // a close button she offered before goes with a new message
@@ -195,6 +301,7 @@ export class Chat {
     const early = asked && asked.kind !== 'close' ? this.doNow(asked) : null;
     await Promise.race([this.appsReady, new Promise((r) => setTimeout(r, 1500))]);
     const messages = [{ role: 'system', content: this.persona() }, ...this.history.slice(-REMEMBER)];
+    if (clip !== null) messages[messages.length - 1] = { role: 'user', content: modelText };
     // nothing yet after a few seconds: Ollama is still loading the model (the first answer after a start),
     // or Claude Code is at work
     const wait = this.agent ? this.t.working : this.cold ? this.t.loading : null;
@@ -244,6 +351,18 @@ export class Chat {
     return true;
   }
 
+  // osu! reports from main (osu.js): a session started or ended
+  osuEvent(cmd) {
+    const lang = this.brain.lang;
+    const seconds = cmd.seconds;
+    let line;
+    if (cmd.event === 'start') line = osuText(lang, 'session');
+    else if (cmd.error) line = osuText(lang, 'endFailed', { seconds, error: cmd.error });
+    else if (!cmd.stats || cmd.pp == null) line = osuText(lang, 'endNoStats', { seconds });
+    else line = osuText(lang, 'end', { seconds, pp: cmd.pp, rank: cmd.rank });
+    this.panel.say({ kind: 'info', line, hold: 9000 });
+  }
+
   // an answer of hers, kept with your message before it
   remember(message) {
     this.history.push(message);
@@ -263,6 +382,8 @@ export class Chat {
     if (name) return { kind: 'name', name };
     const memo = MEMO_ASK.exec(text)?.[1]?.trim();
     if (memo) return { kind: 'memo', text: memo };
+    if (OSU_OFF.test(text)) return { kind: 'osuOff' };
+    if (OSU_ASK.test(text)) return { kind: 'osu' };
     const media = MEDIA_ASK.find(([, re]) => re.test(text))?.[0];
     if (media && (count <= 5 || MUSIC_WORD.test(text))) return { kind: 'media', action: media };
     const song = SPOTIFY_ASK.exec(text)?.[1];
@@ -277,6 +398,15 @@ export class Chat {
   async doNow(asked) {
     const { t } = this;
     const custom = this.brain.custom;
+    if (asked.kind === 'osu' || asked.kind === 'osuOff') {
+      if (asked.kind === 'osuOff') {
+        await this.host.osuStop();
+        return { line: osuText(this.brain.lang, 'stopped'), face: 'smug' };
+      }
+      const res = await this.host.osuStart();
+      if (!res.ok) return { line: osuText(this.brain.lang, res.code === 'nopath' ? 'nopath' : 'error'), face: 'wide' };
+      return { line: osuText(this.brain.lang, res.configured ? 'started' : 'startedNoStats'), face: 'laugh' };
+    }
     if (asked.kind === 'name') {
       custom.userName = asked.name; // her answer, being written now, already knows it
       this.host.setConfig({ userName: asked.name });
