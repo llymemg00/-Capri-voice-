@@ -363,6 +363,7 @@ async function boot() {
     }
   });
 
+  let sleptByGame = false; // she went to sleep because of a game (not because you put her away)
   host.onCommand(async (cmd) => {
     const t = brain.t;
     switch (cmd.name) {
@@ -450,6 +451,10 @@ async function boot() {
         if (cmd.topic === 'welcome') guide.welcome();
         else if (cmd.topic === 'menu') guide.menu();
         else if (typeof guide[cmd.topic] === 'function') guide.scene(() => guide[cmd.topic]());
+        break;
+      case 'game': // a full-screen game: asleep in her mask, and awake again after (games.js)
+        if (cmd.on && !capri.stowed) { sleptByGame = true; capri.stow(); }
+        else if (!cmd.on && sleptByGame) { sleptByGame = false; capri.unstow(); }
         break;
       case 'stow': // Ctrl+Alt+C: into her biochip, or back out
         if (cmd.on) capri.stow();

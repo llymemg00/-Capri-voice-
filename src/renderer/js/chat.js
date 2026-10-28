@@ -10,6 +10,19 @@ import { ASSISTANT_NAMES } from './lines.js';
 
 const REMEMBER = 20; // messages she has in mind when answering
 // what she says about osu! mode, by language (English when there is no line for the language)
+const HAND_TEXT = {
+  en: { power: 'Done: {action}.', focused: 'Switched to {app}.', fileMade: 'I made the file: {path}', searching: 'Searching Google for "{query}".', muted: 'I pressed the mic key in Discord.', deafened: 'I pressed the headphones key in Discord.', discordNoKey: 'Set discordMuteKey in my settings file first, to the shortcut you set in Discord.', failed: 'That didn\'t work: {error}', trashIt: 'Send {path} to the Recycle Bin', trashed: 'It is in the Recycle Bin: {path}', no: 'No' },
+  fr: { power: 'C\'est fait : {action}.', focused: 'Je suis passée sur {app}.', fileMade: 'J\'ai créé le fichier : {path}', searching: 'Je cherche « {query} » sur Google.', muted: 'J\'ai appuyé sur la touche micro dans Discord.', deafened: 'J\'ai appuyé sur la touche casque dans Discord.', discordNoKey: 'Mets d\'abord discordMuteKey dans mon fichier de réglages, avec le raccourci que tu as mis dans Discord.', failed: 'Ça n\'a pas marché : {error}', trashIt: 'Envoyer {path} à la Corbeille', trashed: 'C\'est dans la Corbeille : {path}', no: 'Non' },
+  es: { power: 'Hecho: {action}.', focused: 'Cambié a {app}.', fileMade: 'Creé el archivo: {path}', searching: 'Busco «{query}» en Google.', muted: 'Pulsé la tecla del micro en Discord.', deafened: 'Pulsé la tecla de los auriculares en Discord.', discordNoKey: 'Pon primero discordMuteKey en mi archivo de ajustes, con el atajo que pusiste en Discord.', failed: 'No funcionó: {error}', trashIt: 'Enviar {path} a la Papelera', trashed: 'Está en la Papelera: {path}', no: 'No' },
+  pt: { power: 'Feito: {action}.', focused: 'Mudei para {app}.', fileMade: 'Criei o arquivo: {path}', searching: 'Pesquisando «{query}» no Google.', muted: 'Apertei a tecla do microfone no Discord.', deafened: 'Apertei a tecla dos fones no Discord.', discordNoKey: 'Coloque primeiro discordMuteKey no meu arquivo de configurações, com o atalho que você definiu no Discord.', failed: 'Não deu certo: {error}', trashIt: 'Enviar {path} para a Lixeira', trashed: 'Está na Lixeira: {path}', no: 'Não' },
+  ru: { power: 'Сделано: {action}.', focused: 'Переключила на {app}.', fileMade: 'Я создала файл: {path}', searching: 'Ищу «{query}» в Google.', muted: 'Нажала клавишу микрофона в Discord.', deafened: 'Нажала клавишу наушников в Discord.', discordNoKey: 'Сначала укажите discordMuteKey в файле настроек: то же сочетание, что вы назначили в Discord.', failed: 'Не получилось: {error}', trashIt: 'Отправить {path} в корзину', trashed: 'Отправлено в корзину: {path}', no: 'Нет' },
+};
+
+function handText(lang, key, data = {}) {
+  const t = HAND_TEXT[lang] || HAND_TEXT.en;
+  return fill(t[key] || HAND_TEXT.en[key], data);
+}
+
 const OSU_TEXT = {
   en: {
     started: 'osu!lazer is up. I\'m keeping track of your session.',
@@ -110,6 +123,18 @@ const CLOSE_ASK = /\b(close|shut|quit|kill|exit)|ferm|quitt|coupe|arr[êe]t|cier
 const CLIPBOARD_ASK = /clipboard|буфер|presse-papier|portapapel|área de transfer|copié|copiado|copiei|скопир|what i copied/i;
 // her other tags: [[open: Spotify]], [[music: Bad Bunny]], [[media: next]], [[site: youtube.com]]
 const TAG = /\[\[\s*(open|music|media|site)\s*:\s*([^\]]*)\]\]/i;
+// her hands: [[file: PLACE | NAME | TEXT]], [[trash: FULL PATH]], [[search: QUERY]], [[discord: mute|deafen]]
+const HAND_TAG = /\[\[\s*(file|trash|search|discord|power|focus)\s*:\s*([^\]]*)\]\]/i;
+// she only acts on these when your own words asked for it, so a tag alone never does anything
+const HAND_ASK = {
+  file: (t) => /fichier|archivo|arquivo|\bfile\b|\btxt\b|файл/i.test(t) && /creat|crée|crea|cria|созд|сделай|make|new|nouveau|nuevo|novo/i.test(t),
+  trash: (t) => /supprim|borra|apag|delete|remove|trash|corbeille|papelera|lixeira|удали|корзин|убери/i.test(t),
+  search: (t) => /google|гугл|загугл|search|recherch|busca|pesquis|найди|поищи/i.test(t),
+  discord: (t) => /discord|дискорд|микро|mic\b|micro|наушник|deafen|mute|заглуш|casque|auricular|fone/i.test(t),
+  // only when you named the power action yourself: a chat about shutdowns is not a shutdown
+  power: (t) => /выключи (компьютер|пк|комп|ноут)|выруби|перезагруз|restart|reboot|shut ?down|turn off (my |the )?(pc|computer)|спящ|sleep mode|заблокируй|lock (my |the )?(pc|screen|computer)|выйди из системы|sign ?out|log ?out|éteins|redémarre|verrouille|apaga(r)? (el |mi )?(pc|ordenador|computadora)|reinicia|bloquea|desliga(r)? (o )?(pc|computador)|reinicia|bloqueia|отмени.*(выключени|перезагрузк)|cancel (the )?shutdown/i.test(t),
+  focus: (t) => /переключи|покажи|открой окно|перейди|switch to|bring up|show me|go to|passe sur|cambia a|muestra|troca para|mostra/i.test(t),
+};
 // "open", "launch", "ouvre", "lance", "abre", "открой"... in any of her languages
 // osu! mode: "режим осу", "osu mode", "modo osu"; off: "выключи осу", "stop osu"
 const OSU_OFF = /(выключи|выключить|отключи|stop|arr[eê]te|apaga|desliga)[^\n]*(осу|osu)/i;
@@ -449,6 +474,8 @@ export class Chat {
     if (asked && asked.kind !== 'open') return undefined; // music that didn't work out: nothing more to offer
     const closeTag = tagged(raw);
     if (closeTag) return wanted('close', text) ? this.offerClose(closeTag, answer) : undefined;
+    const hand = HAND_TAG.exec(raw);
+    if (hand) return this.hand(hand[1].toLowerCase(), hand[2].trim(), answer, text);
     const tag = TAG.exec(raw);
     if (!tag) return undefined;
     const kind = tag[1].toLowerCase();
@@ -542,6 +569,52 @@ export class Chat {
   }
 
   // She was asked to close an app: a button with its name, and nothing happens until you click it.
+  // her hands: a text file, a Google search, Discord's mic and headphones keys, a file to the Recycle Bin
+  async hand(kind, value, answer, text) {
+    const lang = this.brain.lang;
+    if (!value || !HAND_ASK[kind]?.(text)) return undefined;
+    if (kind === 'file') {
+      const [place, name, ...rest] = value.split('|');
+      const res = await this.host.createFile({ place: (place || '').trim(), name: (name || '').trim(), content: rest.join('|').trim() });
+      return this.addLine(answer, res.error ? handText(lang, 'failed', res) : handText(lang, 'fileMade', { path: res.path }));
+    }
+    if (kind === 'search') {
+      await this.host.openSearch(value);
+      return this.addLine(answer, handText(lang, 'searching', { query: value }));
+    }
+    if (kind === 'discord') {
+      const action = /deaf|casque|auricular|fone|наушник/i.test(value) ? 'deafen' : 'mute';
+      const res = await this.host.discordKey(action);
+      if (res.error === 'nokey') return this.addLine(answer, handText(lang, 'discordNoKey'));
+      if (res.error) return this.addLine(answer, handText(lang, 'failed', res));
+      return this.addLine(answer, handText(lang, action === 'deafen' ? 'deafened' : 'muted'));
+    }
+    if (kind === 'power') {
+      const action = value.toLowerCase().replace(/[\s-]+/g, '_');
+      const res = await this.host.power(action);
+      return this.addLine(answer, res.error ? handText(lang, 'failed', res) : handText(lang, 'power', { action }));
+    }
+    if (kind === 'focus') {
+      const res = await this.host.focusWindow(value);
+      return this.addLine(answer, res.error ? handText(lang, 'failed', res) : handText(lang, 'focused', { app: value }));
+    }
+    if (kind === 'trash') {
+      this.panel.setActions(
+        [{ id: 'trash', label: handText(lang, 'trashIt', { path: value }), primary: true }, { id: 'no', label: handText(lang, 'no') }],
+        (id) => (id === 'trash' ? this.trash(value, answer) : this.panel.setActions([])),
+      );
+      return undefined;
+    }
+    return undefined;
+  }
+
+  async trash(target, answer) {
+    const lang = this.brain.lang;
+    this.panel.setActions([]);
+    const res = await this.host.trashFile(target);
+    return this.addLine(answer, res.error ? handText(lang, 'failed', res) : handText(lang, 'trashed', { path: target }));
+  }
+
   async offerClose(wanted, answer) {
     const { t } = this;
     const app = await this.host.findApp(wanted);
@@ -584,7 +657,7 @@ export class Chat {
   // What she can do on the PC when you ask (Windows), and nothing else.
   powers() {
     const lines = [
-      'Only when the user asks you to open an app or a game installed on their PC, play something on Spotify, control the music playing, or open a website: say in a few words that you will, and end your answer with one tag: [[open: NAME]], [[music: WHAT TO PLAY]], [[media: ACTION]] (ACTION: pause, play, next, previous, volup, voldown or mute), or [[site: ADDRESS]]. Some of these get a button to confirm, so never say it is already done. Any other time, write no tag at all: there are no other tags.',
+      'Only when the user asks you to open an app or a game installed on their PC, play something on Spotify, control the music playing, or open a website: say in a few words that you will, and end your answer with one tag: [[open: NAME]], [[music: WHAT TO PLAY]], [[media: ACTION]] (ACTION: pause, play, next, previous, volup, voldown or mute), or [[site: ADDRESS]]. Some of these get a button to confirm, so never say it is already done. Her hands: when the user asks her to create a text file, end your answer with [[file: PLACE | NAME | TEXT]] (PLACE: desktop, documents, downloads, or a full folder path); to send a file or folder to the Recycle Bin, [[trash: FULL PATH]] (it asks first); to search Google, [[search: QUERY]]; to press the mic or headphones key in Discord, [[discord: mute]] or [[discord: deafen]]; to shut down, restart, sign out, sleep, lock, or cancel a shutdown, [[power: shut_down | restart | sign_out | sleep | lock | cancel]] (only when they asked for it, straight away); to bring a the window of a program to the front, [[focus: PROGRAM NAME]]. Any other time, write no tag at all: there are no other tags.',
     ];
     lines.push('To download or install a program the user names, open its official download page with [[site: ADDRESS]]. You never run an installer: they download it and start it themselves. Official pages: Discord discord.com/download, Steam store.steampowered.com/about, Telegram desktop.telegram.org, Spotify spotify.com/download, Google Chrome google.com/chrome, Visual Studio Code code.visualstudio.com, VLC videolan.org/vlc, Firefox mozilla.org/firefox, OBS obsproject.com.');
     if (this.apps.length) {

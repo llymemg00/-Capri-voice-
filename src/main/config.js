@@ -37,6 +37,10 @@ const DEFAULTS = {
   osuUserId: '',       // your osu! user id (the number in your profile link)
   osuClientId: '',     // an OAuth client of yours (osu! › Settings › OAuth), for the rating
   osuClientSecret: '', // its secret: kept out of the overlay (main.js)
+  discordMuteKey: '',    // the shortcut you set in Discord for Toggle Mute, e.g. "ctrl+alt+m" (keys.js)
+  discordDeafenKey: '',  // the one for Toggle Deafen, e.g. "ctrl+alt+d"
+  gameSleep: true,       // she sleeps in her mask while a full-screen game runs (games.js)
+  sleepAfterSeconds: 120, // how long a window must fill the screen before she counts it as a game
   render: 'auto',   // how her window is drawn: 'auto', 'gl' (OpenGL) or 'software' (no graphics card), for PCs that show it black
 };
 

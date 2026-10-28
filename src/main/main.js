@@ -19,6 +19,11 @@ const apps = require('./apps');
 const launch = require('./launch');
 const stt = require('./stt');
 const osu = require('./osu');
+const files = require('./files');
+const keys = require('./keys');
+const games = require('./games');
+const power = require('./power');
+const windowFocus = require('./windows-focus');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -689,6 +694,22 @@ function registerIpc() {
   const appInfo = (app) => app && { name: app.process, label: app.label };
   // osu! mode (osu.js): start the game and watch it, or stop watching
   osu.init({ emitEvent: (payload) => sendCommand('osu', payload), config: config.load });
+  // her hands: files (Recycle Bin only), Discord's keys, a Google search
+  ipcMain.handle('files:create', (_e, args) => files.create(args || {}).catch((err) => ({ error: err.message })));
+  ipcMain.handle('files:trash', (_e, target) => files.trash(target).catch((err) => ({ error: err.message })));
+  ipcMain.handle('keys:discord', (_e, action) => keys.discord(action, config.load()).catch((err) => ({ error: err.message })));
+  ipcMain.handle('power:run', (_e, action) => power.run(String(action || '')).catch((err) => ({ error: err.message })));
+  ipcMain.handle('window:focus', (_e, name) => windowFocus.focus(name).catch((err) => ({ error: err.message })));
+  ipcMain.handle('search:open', (_e, query) => {
+    const q = String(query || '').trim().slice(0, 200);
+    if (!q) return false;
+    return shell.openExternal(`https://www.google.com/search?q=${encodeURIComponent(q)}`).then(() => true, () => false);
+  });
+  // she sleeps in her mask while a game runs full screen (games.js)
+  const cfgNow = config.load();
+  if (cfgNow.gameSleep) {
+    games.start((payload) => sendCommand('game', payload), { sleepAfterSeconds: cfgNow.sleepAfterSeconds });
+  }
   ipcMain.handle('osu:start', () => osu.start().catch((err) => ({ ok: false, code: 'error', error: err.message })));
   ipcMain.handle('osu:stop', () => osu.stop());
   ipcMain.handle('apps:list', async () => (await apps.list().catch(() => [])).map(appInfo));
@@ -890,6 +911,7 @@ function main() {
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
     windowWatch?.stop();
+    games.stop();
   });
   app.on('window-all-closed', (e) => e.preventDefault());
 }

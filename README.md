@@ -197,6 +197,18 @@ panel says so every time.
   "osu mode off" to stop. When you close the game, she reports how long you played and the pp you gained; see
   [osu! mode](#osu-mode).
 
+- **Files**: "make a text file notes.txt on my desktop" creates it (in Desktop, Documents or Downloads, or a folder you
+  name). Deleting goes through a button, and the file goes to the Recycle Bin, never straight to deletion. Windows
+  folders, drive roots, your user folder, AppData and Capri's own folder are off limits.
+- **Google**: "google the weather in Odesa" opens a search in your browser.
+- **Discord**: "mute my mic in Discord" or "deafen" presses the shortcut you set in Discord (see below).
+- **Power**: "shut down my PC", "restart", "sign out", "sleep", "lock the screen", or "cancel the shutdown" happen right
+  away when you ask. Only those actions exist, and a chat about shutdowns is not a shutdown.
+- **Windows**: "switch to Spotify" brings that program's window to the front.
+- **Game sleep**: when a window fills the whole screen for two minutes (`sleepAfterSeconds`), she goes to sleep in her
+  mask and wakes when the screen is no longer full. Turn it off with `gameSleep: false`. Music and the voice commands
+  still work while she sleeps.
+
 Nothing else: she can't see your screen or your files.
 
 ### Make her yours
@@ -271,6 +283,21 @@ can show up 1 to 5 minutes later. If the game was already open when you said "os
 moment. Each session is saved to `osu-log.json` in her data folder. "osu mode off" stops watching.
 
 Animations for this mode aren't done yet: for now, the reports are text in her panel.
+
+## Discord shortcuts
+
+Discord has no default key for mute or deafen, so set one there first: User Settings › Keybinds › *Toggle Mute* and
+*Toggle Deafen*. Then write the same shortcut in her settings file:
+
+```json
+{
+  "discordMuteKey": "ctrl+alt+m",
+  "discordDeafenKey": "ctrl+alt+d"
+}
+```
+
+Capri presses it when you ask. She can't see whether you're muted afterwards, so check the mic icon in Discord.
+Activity in Discord is not visible to her: a game counts when its window fills the screen for long enough.
 
 ## Install
 
