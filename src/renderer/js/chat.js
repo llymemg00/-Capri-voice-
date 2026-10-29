@@ -10,12 +10,26 @@ import { ASSISTANT_NAMES } from './lines.js';
 
 const REMEMBER = 20; // messages she has in mind when answering
 // what she says about osu! mode, by language (English when there is no line for the language)
+// the plain phrases, in the languages she speaks; a request in them goes straight to the code
+const DIRECT_POWER = [
+  [/(выключи|выруби)\s+(компьютер|комп|пк|ноутбук|ноут)|(shut ?down|turn off)\s+(my |the )?(pc|computer|laptop)|(éteins|éteindre)\s+(le |mon )?(pc|ordi)|(apaga|apagar)\s+(el |mi )?(pc|ordenador|computadora)|(desliga|desligar)\s+(o |meu )?(pc|computador)/i, 'shut_down'],
+  [/перезагруз[а-яё]*\s+(компьютер|комп|пк|ноут)|(restart|reboot)\s+(my |the )?(pc|computer|laptop)|(redémarre|redémarrer)\s+(le |mon )?(pc|ordi)|(reinicia|reiniciar)\s+(el |mi )?(pc|ordenador|computadora)|(reinicia|reiniciar)\s+(o |meu )?(pc|computador)/i, 'restart'],
+  [/спящ[а-яё]*\s+режим|усни|sleep mode|(put|go) (my |the )?(pc|computer) to sleep|(veille|mise en veille)|(modo )?suspensión|(modo )?suspens[aã]o/i, 'sleep'],
+  [/заблокируй|lock (my |the )?(pc|screen|computer)|verrouille|bloquea(r)? (la )?pantalla|bloquea(r)? (o )?(pc|computador)/i, 'lock'],
+  [/выйди из системы|sign ?out|log ?out|déconnecte|cierra (la )?sesión|sair da conta/i, 'sign_out'],
+  [/отмени[а-яё]*\s+(выключени|перезагрузк)|cancel (the )?shutdown|annule l'arrêt|cancela(r)? el apagado|cancela(r)? o desligamento/i, 'cancel'],
+];
+const DIRECT_BROWSER = /^\s*(открой|запусти|включи)\s+(браузер|браузер[а-яё]*)|^\s*(open|launch|start) (the )?(web )?browser|^\s*ouvre (le )?navigateur|^\s*abre (el )?navegador|^\s*abre (o )?navegador/i;
+const DIRECT_SEARCH = /^\s*(?:загугли|погугли|гугли|найди в гугле|google|googl(?:e|ea)|search google for|search on google for|cherche sur google|busca en google|pesquisa no google)\s*:?\s+(.+)$/i;
+const DIRECT_MIC = /^\s*(выключи|включи|переключи|отключи|заглуши|выключить|включить|mute|unmute|deafen|undeafen|turn (on|off)|coupe|allume|apaga|enciende|silencia|desliga|liga|desactiva|activa)\s.*(микрофон|микро|наушник|mic|microphone|micro|casque|auricular|fone|headphones)/i;
+const DIRECT_DEAF = /наушник|deafen|casque|auricular|fone/i;
+
 const HAND_TEXT = {
-  en: { power: 'Done: {action}.', focused: 'Switched to {app}.', fileMade: 'I made the file: {path}', searching: 'Searching Google for "{query}".', muted: 'I pressed the mic key in Discord.', deafened: 'I pressed the headphones key in Discord.', discordNoKey: 'Set discordMuteKey in my settings file first, to the shortcut you set in Discord.', failed: 'That didn\'t work: {error}', trashIt: 'Send {path} to the Recycle Bin', trashed: 'It is in the Recycle Bin: {path}', no: 'No' },
-  fr: { power: 'C\'est fait : {action}.', focused: 'Je suis passée sur {app}.', fileMade: 'J\'ai créé le fichier : {path}', searching: 'Je cherche « {query} » sur Google.', muted: 'J\'ai appuyé sur la touche micro dans Discord.', deafened: 'J\'ai appuyé sur la touche casque dans Discord.', discordNoKey: 'Mets d\'abord discordMuteKey dans mon fichier de réglages, avec le raccourci que tu as mis dans Discord.', failed: 'Ça n\'a pas marché : {error}', trashIt: 'Envoyer {path} à la Corbeille', trashed: 'C\'est dans la Corbeille : {path}', no: 'Non' },
-  es: { power: 'Hecho: {action}.', focused: 'Cambié a {app}.', fileMade: 'Creé el archivo: {path}', searching: 'Busco «{query}» en Google.', muted: 'Pulsé la tecla del micro en Discord.', deafened: 'Pulsé la tecla de los auriculares en Discord.', discordNoKey: 'Pon primero discordMuteKey en mi archivo de ajustes, con el atajo que pusiste en Discord.', failed: 'No funcionó: {error}', trashIt: 'Enviar {path} a la Papelera', trashed: 'Está en la Papelera: {path}', no: 'No' },
-  pt: { power: 'Feito: {action}.', focused: 'Mudei para {app}.', fileMade: 'Criei o arquivo: {path}', searching: 'Pesquisando «{query}» no Google.', muted: 'Apertei a tecla do microfone no Discord.', deafened: 'Apertei a tecla dos fones no Discord.', discordNoKey: 'Coloque primeiro discordMuteKey no meu arquivo de configurações, com o atalho que você definiu no Discord.', failed: 'Não deu certo: {error}', trashIt: 'Enviar {path} para a Lixeira', trashed: 'Está na Lixeira: {path}', no: 'Não' },
-  ru: { power: 'Сделано: {action}.', focused: 'Переключила на {app}.', fileMade: 'Я создала файл: {path}', searching: 'Ищу «{query}» в Google.', muted: 'Нажала клавишу микрофона в Discord.', deafened: 'Нажала клавишу наушников в Discord.', discordNoKey: 'Сначала укажите discordMuteKey в файле настроек: то же сочетание, что вы назначили в Discord.', failed: 'Не получилось: {error}', trashIt: 'Отправить {path} в корзину', trashed: 'Отправлено в корзину: {path}', no: 'Нет' },
+  en: { browser: 'Opening the browser.', power: 'Done: {action}.', focused: 'Switched to {app}.', fileMade: 'I made the file: {path}', searching: 'Searching Google for "{query}".', muted: 'I pressed the mic key in Discord.', deafened: 'I pressed the headphones key in Discord.', discordNoKey: 'Set discordMuteKey in my settings file first, to the shortcut you set in Discord.', failed: 'That didn\'t work: {error}', trashIt: 'Send {path} to the Recycle Bin', trashed: 'It is in the Recycle Bin: {path}', no: 'No' },
+  fr: { browser: 'J\'ouvre le navigateur.', power: 'C\'est fait : {action}.', focused: 'Je suis passée sur {app}.', fileMade: 'J\'ai créé le fichier : {path}', searching: 'Je cherche « {query} » sur Google.', muted: 'J\'ai appuyé sur la touche micro dans Discord.', deafened: 'J\'ai appuyé sur la touche casque dans Discord.', discordNoKey: 'Mets d\'abord discordMuteKey dans mon fichier de réglages, avec le raccourci que tu as mis dans Discord.', failed: 'Ça n\'a pas marché : {error}', trashIt: 'Envoyer {path} à la Corbeille', trashed: 'C\'est dans la Corbeille : {path}', no: 'Non' },
+  es: { browser: 'Abro el navegador.', power: 'Hecho: {action}.', focused: 'Cambié a {app}.', fileMade: 'Creé el archivo: {path}', searching: 'Busco «{query}» en Google.', muted: 'Pulsé la tecla del micro en Discord.', deafened: 'Pulsé la tecla de los auriculares en Discord.', discordNoKey: 'Pon primero discordMuteKey en mi archivo de ajustes, con el atajo que pusiste en Discord.', failed: 'No funcionó: {error}', trashIt: 'Enviar {path} a la Papelera', trashed: 'Está en la Papelera: {path}', no: 'No' },
+  pt: { browser: 'Abrindo o navegador.', power: 'Feito: {action}.', focused: 'Mudei para {app}.', fileMade: 'Criei o arquivo: {path}', searching: 'Pesquisando «{query}» no Google.', muted: 'Apertei a tecla do microfone no Discord.', deafened: 'Apertei a tecla dos fones no Discord.', discordNoKey: 'Coloque primeiro discordMuteKey no meu arquivo de configurações, com o atalho que você definiu no Discord.', failed: 'Não deu certo: {error}', trashIt: 'Enviar {path} para a Lixeira', trashed: 'Está na Lixeira: {path}', no: 'Não' },
+  ru: { browser: 'Открываю браузер.', power: 'Сделано: {action}.', focused: 'Переключила на {app}.', fileMade: 'Я создала файл: {path}', searching: 'Ищу «{query}» в Google.', muted: 'Нажала клавишу микрофона в Discord.', deafened: 'Нажала клавишу наушников в Discord.', discordNoKey: 'Сначала укажите discordMuteKey в файле настроек: то же сочетание, что вы назначили в Discord.', failed: 'Не получилось: {error}', trashIt: 'Отправить {path} в корзину', trashed: 'Отправлено в корзину: {path}', no: 'Нет' },
 };
 
 function handText(lang, key, data = {}) {
@@ -305,6 +319,9 @@ export class Chat {
 
   async sendTurn(text) {
     if (this.turn || !this.open) return;
+    // the plain commands (power, Google, browser, Discord keys) are carried out by the code itself, so they
+    // work whatever model she runs on; the model is only asked for what the code can't do
+    if (!this.agent && await this.direct(text)) return;
     const id = Date.now();
     this.turn = id;
     this.answer = '';
@@ -569,6 +586,39 @@ export class Chat {
   }
 
   // She was asked to close an app: a button with its name, and nothing happens until you click it.
+  // Plain commands, carried out here: no tag from the model needed. Returns true when it handled the request.
+  async direct(text) {
+    const lang = this.brain.lang;
+    const t = String(text || '').trim();
+    const say = (line) => this.panel.say({ kind: 'info', line, hold: 5000 });
+    for (const [re, action] of DIRECT_POWER) {
+      if (re.test(t)) {
+        const res = await this.host.power(action);
+        say(res.error ? handText(lang, 'failed', res) : handText(lang, 'power', { action }));
+        return true;
+      }
+    }
+    if (DIRECT_BROWSER.test(t)) {
+      await this.host.openSite('https://www.google.com');
+      say(handText(lang, 'browser'));
+      return true;
+    }
+    const search = DIRECT_SEARCH.exec(t);
+    if (search && search[1].trim()) {
+      await this.host.openSearch(search[1].trim());
+      say(handText(lang, 'searching', { query: search[1].trim() }));
+      return true;
+    }
+    if (DIRECT_MIC.test(t)) {
+      const action = DIRECT_DEAF.test(t) ? 'deafen' : 'mute';
+      const res = await this.host.discordKey(action);
+      say(res.error === 'nokey' ? handText(lang, 'discordNoKey') : res.error ? handText(lang, 'failed', res)
+        : handText(lang, action === 'deafen' ? 'deafened' : 'muted'));
+      return true;
+    }
+    return false;
+  }
+
   // her hands: a text file, a Google search, Discord's mic and headphones keys, a file to the Recycle Bin
   async hand(kind, value, answer, text) {
     const lang = this.brain.lang;
