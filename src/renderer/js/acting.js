@@ -12,6 +12,7 @@
 //   long    that same arm drawn longer than it is, 1 = as drawn (longL / longR for one arm)
 //   smear   [x, y] trail of head multiples, px     echo   [x, y] green/red afterimages, px
 //   kickL / kickR   lower legs swinging outward, radians (when sitting)
+//   bend    bent at the hips, radians: the legs swing toward the left of the cut-out (lying back)
 //
 // A key can carry a cue as third item: capri.js fires effects and sounds when it's reached.
 // Directional acts are drawn leaning to screen-right; played with dir -1 they're mirrored.
@@ -22,7 +23,7 @@ const rep = (n, keys) => Array.from({ length: n }, () => keys).flat();
 
 export const NEUTRAL = {
   head: 0, mane: 0, hair: 0, tilt: 0, bob: 0, sx: 1, sy: 1, armL: 0, armR: 0, longL: 1, longR: 1,
-  smear: [0, 0], echo: [0, 0], kickL: 0, kickR: 0,
+  smear: [0, 0], echo: [0, 0], kickL: 0, kickR: 0, bend: 0,
 };
 
 export const ACTS = {
@@ -51,6 +52,24 @@ export const ACTS = {
       [2, { kickL: 0.08, kickR: 0.08, arms: -0.42 }],
       [5, { kickL: -0.03, kickR: 0.24, hair: 1.5, arms: -0.42 }],
       [10, { kickL: 0.04, kickR: 0.04, head: 0.08, arms: -0.4 }], // a pause, head cocked
+    ],
+  },
+
+  // lying back on her ledge (capri.js turns her): propped up on her side, bent at the hips so her
+  // legs lie along it, head up, arms tucked in against her (drawn to nothing). Barely moving: her
+  // mane rising and settling as she breathes, her head lolling a little, her top leg drawn up
+  // now and then and let down again.
+  lounge: {
+    loop: true,
+    keys: [
+      [20, { bend: 0.52, head: -0.9, mane: -0.02, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.25, hair: -1 }],
+      [20, { bend: 0.52, head: -0.92, mane: 0.04, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.25, hair: 1 }],
+      [14, { bend: 0.52, head: -0.8, mane: -0.02, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.25, hair: -1 }],
+      [20, { bend: 0.52, head: -0.84, mane: 0.04, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.25, hair: 1 }],
+      [3, { bend: 0.52, head: -0.88, mane: 0.02, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.36 }],
+      [12, { bend: 0.52, head: -0.9, mane: 0.03, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.46 }],
+      [3, { bend: 0.52, head: -0.9, mane: 0, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.33 }],
+      [20, { bend: 0.52, head: -0.92, mane: -0.02, armL: -0.88, longL: 0.01, armR: 0, longR: 0.01, kickL: 0.25, hair: -1 }],
     ],
   },
 
@@ -420,6 +439,22 @@ export const ACTS = {
     ],
   },
 
+  // a stretch on the ledge: hunched first, then both arms flung up over her head and held there,
+  // head back, the mane bristling, legs out; then they drop and she slumps with a sigh
+  stretch: {
+    priority: 1,
+    keys: [
+      [3, { arms: -0.55, head: 0.08, mane: -0.1, sy: 0.95, sx: 1.04 }],
+      [1, { arms: 1.2, head: -0.04, mane: 0.18, sy: 1.06, sx: 0.96, smear: [0, -10] }],
+      [2, { arms: 1.8, head: -0.12, mane: 0.3, sy: 1.08, sx: 0.95, kickL: 0.22, kickR: 0.22 }],
+      [12, { arms: 1.92, head: -0.15, mane: 0.36, sy: 1.09, sx: 0.94, kickL: 0.26, kickR: 0.26 }],
+      [2, { arms: 1.86, head: -0.13, mane: 0.32, sy: 1.08, sx: 0.95, kickL: 0.2, kickR: 0.2 }],
+      [1, { arms: 0.7, mane: 0.1, smear: [0, 8] }],
+      [3, { arms: -0.5, head: 0.1, mane: -0.16, sy: 0.95, sx: 1.04 }],
+      [4, { arms: -0.42, head: 0.05, mane: -0.08 }],
+    ],
+  },
+
   // while falling: stretched, mane blown up, arms flailing every other drawing
   fall: {
     loop: true,
@@ -427,6 +462,159 @@ export const ACTS = {
     keys: [
       [2, { sy: 1.12, sx: 0.92, mane: 0.36, head: 0.05, smear: [0, -16], armL: 0.8, armR: 0.55 }],
       [2, { sy: 1.1, sx: 0.93, mane: 0.26, head: -0.04, smear: [0, -12], armL: 0.55, armR: 0.82 }],
+    ],
+  },
+
+  // ---- thrown around (capri.js throwHer) ----
+
+  // picked up: a jolt, arms flung up, the mane bristling, stretched for one drawing
+  grabbed: {
+    priority: 3,
+    fps: 24,
+    keys: [
+      [1, { sy: 1.1, sx: 0.92, mane: 0.55, armL: 0.95, armR: 0.85, head: -0.06, smear: [0, 10] }],
+      [2, { sy: 1.04, sx: 0.97, mane: 0.42, armL: 0.8, armR: 0.72, head: 0.04 }],
+      [2, { mane: 0.3, armL: 0.62, armR: 0.5 }],
+    ],
+  },
+
+  // held up by the pointer: dangling from where you grabbed her (she swings around it, capri.js),
+  // legs kicking one after the other, arms up and out
+  held: {
+    loop: true,
+    keys: [
+      [3, { armL: 0.62, armR: 0.36, mane: 0.22, head: 0.06, kickL: 0.24, kickR: -0.06, hair: -1.5 }],
+      [3, { armL: 0.4, armR: 0.6, mane: 0.17, head: -0.04, kickL: -0.06, kickR: 0.26, hair: 1.5 }],
+    ],
+  },
+
+  // flying through the air: limbs flailing on ones (her spin, trail and mane come from capri.js)
+  tumble: {
+    loop: true,
+    fps: 24,
+    keys: [
+      [2, { armL: 1.1, armR: 0.32, mane: 0.5, head: 0.12, kickL: 0.32, kickR: -0.08, sx: 0.95, sy: 1.06 }],
+      [2, { armL: 0.38, armR: 1.15, mane: 0.42, head: -0.1, kickL: -0.08, kickR: 0.34, sx: 0.96, sy: 1.05 }],
+    ],
+  },
+
+  // before she jumps over to another screen: she sinks, leaning toward it, arms pulled back
+  crouch: {
+    priority: 3,
+    fps: 24,
+    directional: true,
+    keys: [
+      [2, { sy: 0.92, sx: 1.04, bob: 3, mane: -0.08, armL: -0.25, armR: -0.25, head: 0.08, tilt: 2 }],
+      [3, { sy: 0.82, sx: 1.1, bob: 7, mane: -0.24, armL: -0.5, armR: -0.5, head: 0.15, tilt: 4 }],
+      [3, { sy: 0.78, sx: 1.13, bob: 9, mane: -0.3, armL: -0.56, armR: -0.56, head: 0.18, tilt: 5, echo: [2, 0] }],
+    ],
+  },
+
+  // the jump itself: leading with her reaching arm, the other one back, legs tucked, mane streaming
+  leap: {
+    loop: true,
+    fps: 24,
+    directional: true,
+    keys: [
+      [3, { reach: 0.75, long: 1.25, mane: 0.42, head: 0.14, kickL: 0.36, kickR: 0.3, sy: 1.08, sx: 0.94 }],
+      [3, { reach: 0.82, long: 1.3, mane: 0.5, head: 0.16, kickL: 0.3, kickR: 0.38, sy: 1.1, sx: 0.93 }],
+    ],
+  },
+
+  // knocked down, lying on her side (capri.js turns her): limp, the mane flat, a leg twitching
+  ko: {
+    loop: true,
+    keys: [
+      [10, { armL: 0.34, armR: 0.1, mane: -0.18, head: 0.16, kickL: 0.2, kickR: 0.05 }],
+      [1, { armL: 0.38, armR: 0.14, mane: -0.14, head: 0.22, kickL: 0.3, kickR: 0.06 }],
+      [7, { armL: 0.34, armR: 0.1, mane: -0.18, head: 0.14, kickL: 0.18, kickR: 0.04 }],
+    ],
+  },
+
+  // back on her feet after a crash: her head shaken hard both ways, then the mane flares the dust off
+  shake: {
+    priority: 3,
+    fps: 24,
+    keys: [
+      [2, { head: 0.2, mane: 0.3, tilt: 2, smear: [-10, 0] }],
+      [2, { head: -0.2, mane: 0.34, tilt: -2, smear: [10, 0] }],
+      ...rep(2, [[2, { head: 0.16, mane: 0.3, tilt: 1.5 }], [2, { head: -0.16, mane: 0.32, tilt: -1.5 }]]),
+      [1, { head: 0.04, mane: 0.6, sy: 1.05, sx: 0.97 }, 'dust'],
+      [3, { head: 0, mane: 0.32 }],
+      [4, { mane: 0.12 }],
+      [1, {}],
+    ],
+  },
+
+  // thrown, and down on her feet anyway: a deep crouch, a hand slammed down, a beat, then up
+  touchdown: {
+    priority: 3,
+    fps: 24,
+    keys: [
+      [2, { sy: 0.62, sx: 1.3, bob: 8, mane: -0.32, armL: -0.95, armR: 0.28, head: 0.12, smear: [0, -12] }],
+      [4, { sy: 0.7, sx: 1.22, bob: 7, mane: -0.22, armL: -0.9, armR: 0.22, head: 0.14 }],
+      [6, { sy: 0.74, sx: 1.18, bob: 6, mane: -0.16, armL: -0.85, armR: 0.2, head: 0.1 }],
+      [1, { sy: 1.12, sx: 0.92, bob: -6, mane: 0.36, armL: 0.2, armR: 0.3, smear: [0, 14] }],
+      [2, { sy: 1.03, sx: 0.98, bob: -2, mane: 0.26 }],
+      [3, { mane: 0.12 }],
+      [1, {}],
+    ],
+  },
+
+  // ---- your PC (pc.js) ----
+
+  // overheating with your processor: head thrown back, fanning herself with one hand, heat coming
+  // off her ('steam'), then a slump
+  overheat: {
+    priority: 2,
+    keys: [
+      [2, { head: -0.08, mane: 0.3, armL: -0.3, armR: 1.25, tilt: -1 }, 'steam'],
+      [2, { head: -0.1, mane: 0.36, armL: -0.3, armR: 0.82, tilt: -1.5 }],
+      ...rep(4, [[2, { head: -0.08, mane: 0.32, armL: -0.3, armR: 1.25, tilt: -1 }, 'steam'], [2, { head: -0.1, mane: 0.38, armL: -0.3, armR: 0.82, tilt: -1.5 }]]),
+      [8, { head: 0.08, mane: 0.06, armL: -0.42, armR: -0.4, bob: 3 }],
+      [1, {}],
+    ],
+  },
+
+  // the battery running out: she sags, head down, arms hanging, mane flat
+  drained: {
+    priority: 2,
+    keys: [
+      [3, { head: 0.12, mane: -0.12, arms: -0.3, bob: 2 }],
+      [14, { head: 0.24, mane: -0.26, arms: -0.55, bob: 6, sy: 0.96, sx: 1.02 }],
+      [1, { head: 0.08, mane: -0.1, arms: -0.2, bob: 1, smear: [0, 8] }], // a start
+      [10, { head: 0.2, mane: -0.22, arms: -0.5, bob: 5 }],
+      [2, { head: 0.1, arms: -0.2 }],
+      [1, {}],
+    ],
+  },
+
+  // ---- jealous (bond.js) ----
+
+  // glaring at you over another AI: she snaps to it, leans in, mane bristling, holds it, and hisses
+  glare: {
+    priority: 2,
+    directional: true,
+    keys: [
+      [1, { head: 0.1, mane: 0.32, tilt: 2, smear: [-8, 0] }, 'notice'],
+      [9, { head: 0.18, mane: 0.36, tilt: 3, armL: -0.22, armR: -0.22 }],
+      [1, { head: 0.22, mane: 0.46, tilt: 3.6, armL: -0.3, armR: -0.3, echo: [4, 0] }, 'hiss'],
+      [12, { head: 0.19, mane: 0.38, tilt: 3, armL: -0.25, armR: -0.25 }],
+      [2, { head: 0.1, mane: 0.2, tilt: 1 }],
+      [1, {}],
+    ],
+  },
+
+  // sulking: head turned away from you, mane down, arms in
+  huff: {
+    priority: 2,
+    directional: true,
+    keys: [
+      [1, { head: -0.06, mane: 0.1, smear: [8, 0] }],
+      [3, { head: -0.16, mane: -0.08, tilt: -2, armL: -0.28, armR: -0.28 }],
+      [16, { head: -0.18, mane: -0.14, tilt: -2.5, armL: -0.32, armR: -0.32, bob: 2 }],
+      [2, { head: -0.1, mane: -0.06, tilt: -1 }],
+      [1, {}],
     ],
   },
 };
